@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>IP Spoofing Simülasyonu</h1>
+  </header>
+  <main>
+    <div class="controls">
+      <button id="startBtn">Başlat</button>
+      <button id="stopBtn">Durdur</button>
+      <button id="resetBtn">Sıfırla</button>
+    </div>
+    <div class="sim-container">
+      <canvas id="networkCanvas" width="1100" height="600"></canvas>
+      <div id="packetPanel">
+        <h2>Paketler</h2>
+        <ul id="packetList"></ul>
+      </div>
+    </div>
+  </main>
+  <script src="js/visualization.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html> 
