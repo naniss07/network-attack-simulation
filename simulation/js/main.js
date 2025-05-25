@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Sayfa yüklendiğinde renderNetwork çağrılacak
-  // Resimlerin yüklenmesi visualization.js'de yönetiliyor
+  
 });
 
 // Paket panelini güncelleyen fonksiyon
@@ -174,37 +173,37 @@ function animatePacketOverPath({srcIP, srcMAC, dstIP, dstMAC, protocol, content}
 
 // Simülasyon akışı: sırayla paket gönder
 const packetFlow = [
-  // Normal trafik: Client 1 → DNS Server
+  
   {
     srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:01',
     dstIP: '192.168.1.53', dstMAC: 'AA:BB:CC:0A',
     protocol: 'DNS', content: 'A kaydı sorgusu'
   },
-  // DNS yanıtı: DNS Server → Client 1
+  
   {
     srcIP: '192.168.1.53', srcMAC: 'AA:BB:CC:0A',
     dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:01',
     protocol: 'DNS', content: 'A kaydı yanıtı'
   },
-  // Normal trafik: Client 1 → Web Server
+  
   {
     srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:01',
     dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:09',
     protocol: 'HTTP', content: 'GET /index.html'
   },
-  // Web yanıtı: Web Server → Client 1
+  
   {
     srcIP: '192.168.1.100', srcMAC: 'AA:BB:CC:09',
     dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:01',
     protocol: 'HTTP', content: '200 OK'
   },
-  // Saldırı: Attacker, Client 1 IP'siyle Web Server'a istek atıyor
+  
   {
     srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:0B',
     dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:09',
     protocol: 'HTTP', content: 'GET /admin'
   },
-  // Web yanıtı: Web Server → (spoofed IP)
+  
   {
     srcIP: '192.168.1.100', srcMAC: 'AA:BB:CC:09',
     dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:0B',
