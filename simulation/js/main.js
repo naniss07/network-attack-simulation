@@ -49,6 +49,35 @@ function getDeviceByMAC(mac) {
   });
 }
 
+// Router'ın doğru interface MAC adresini bul (geliştirilmiş)
+function getRouterInterfaceMAC(router, nextDevice) {
+  if (!router || !nextDevice) return '-';
+  if (router.ip && router.mac && typeof router.ip === 'object' && typeof router.mac === 'object') {
+    // nextDevice internal ise eth0, DMZ ise eth1
+    // Internal: 10.0.x.x, DMZ: 192.168.1.x
+    if (nextDevice.ip && typeof nextDevice.ip === 'string') {
+      if (nextDevice.ip.startsWith('10.')) return router.mac.eth0;
+      if (nextDevice.ip.startsWith('192.168.1.')) return router.mac.eth1;
+    }
+    // Eğer nextDevice'nin ip'si yoksa, id'sine göre switch ise DMZ mi internal mi bak
+    if (nextDevice.type === 'switch' && nextDevice.x > router.x) return router.mac.eth1;
+    if (nextDevice.type === 'switch' && nextDevice.x < router.x) return router.mac.eth0;
+  }
+  return (typeof router.mac === 'object') ? Object.values(router.mac)[0] : router.mac || '-';
+}
+
+// Layer 3 cihaz tipleri
+const L3_TYPES = ['router', 'client', 'webserver', 'dns', 'attacker'];
+
+function getLayer3MAC(device) {
+  if (!device) return '-';
+  if (device.type === 'router' && device.mac && typeof device.mac === 'object') {
+    // Router için fallback: eth0
+    return device.mac.eth0 || Object.values(device.mac)[0];
+  }
+  return device.mac ? (typeof device.mac === 'object' ? Object.values(device.mac)[0] : device.mac) : '-';
+}
+
 // Bağlantı üzerinden adım adım paket animasyonu ve panel güncelleme
 function animatePacketOverPath({srcIP, srcMAC, dstIP, dstMAC, protocol, content}, callback) {
   const canvas = document.getElementById('networkCanvas');
@@ -66,6 +95,19 @@ function animatePacketOverPath({srcIP, srcMAC, dstIP, dstMAC, protocol, content}
   // Yol: cihaz id'leri
   const path = findPath(src.id, dst.id);
   if (!path || path.length < 2) { callback && callback(); return; }
+  // Layer 3 cihazlar arası geçişleri bul
+  const l3Transitions = [];
+  let lastL3Idx = 0;
+  for (let i = 1; i < path.length; i++) {
+    const prev = devices.find(d => d.id === path[lastL3Idx]);
+    const curr = devices.find(d => d.id === path[i]);
+    if (L3_TYPES.includes(curr.type)) {
+      if (L3_TYPES.includes(prev.type)) {
+        l3Transitions.push([lastL3Idx, i]);
+      }
+      lastL3Idx = i;
+    }
+  }
   let hop = 0;
   function nextHop() {
     if (hop >= path.length - 1) { callback && callback(); return; }
@@ -94,15 +136,33 @@ function animatePacketOverPath({srcIP, srcMAC, dstIP, dstMAC, protocol, content}
         step++;
         requestAnimationFrame(drawFrame);
       } else {
-        // Her hop'ta paneli güncelle
-        addPacketToPanel({
-          srcIP,
-          srcMAC: from.mac ? (typeof from.mac === 'object' ? Object.values(from.mac)[0] : from.mac) : '-',
-          dstIP,
-          dstMAC: to.mac ? (typeof to.mac === 'object' ? Object.values(to.mac)[0] : to.mac) : '-',
-          protocol,
-          content
-        });
+        // Panelde sadece Layer 3 cihazdan bir sonraki Layer 3 cihaza geçişlerde göster
+        for (const [fromIdx, toIdx] of l3Transitions) {
+          if (hop === fromIdx) {
+            let realSrcMAC;
+            let realDstMAC;
+            const l3From = devices.find(d => d.id === path[fromIdx]);
+            const l3To = devices.find(d => d.id === path[toIdx]);
+            if (l3From.type === 'router') {
+              realSrcMAC = getRouterInterfaceMAC(l3From, l3To);
+            } else {
+              realSrcMAC = getLayer3MAC(l3From);
+            }
+            if (l3To.type === 'router') {
+              realDstMAC = getRouterInterfaceMAC(l3To, l3From);
+            } else {
+              realDstMAC = getLayer3MAC(l3To);
+            }
+            addPacketToPanel({
+              srcIP,
+              srcMAC: realSrcMAC,
+              dstIP,
+              dstMAC: realDstMAC,
+              protocol,
+              content
+            });
+          }
+        }
         hop++;
         setTimeout(nextHop, 200); // Her hop arası kısa bekleme
       }
@@ -158,7 +218,7 @@ function runPacketFlow(index = 0) {
   if (!simulationRunning || index >= packetFlow.length) return;
   const packet = packetFlow[index];
   animatePacketOverPath(packet, () => {
-    addPacketToPanel(packet);
+    // Panelde fazladan ekleme yok, sadece hop hop gösterim olacak
     setTimeout(() => runPacketFlow(index + 1), 1200);
   });
 }
