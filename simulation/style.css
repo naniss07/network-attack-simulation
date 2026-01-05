@@ -90,3 +90,47 @@ main {
   box-shadow: 0 1px 4px rgba(0,0,0,0.03);
   word-break: break-all;
 } 
+
+/* Senaryo Bilgi Paneli */
+#scenarioInfo {
+  width: min(1100px, 96vw);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 18px 18px 6px 18px;
+  margin: 8px 0 36px 0;
+}
+#scenarioInfo h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  color: #2d72d9;
+}
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.scenario-card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.scenario-card h3 {
+  margin: 0 0 6px 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #1a1f36;
+}
+.scenario-card p {
+  margin: 0;
+  color: #333;
+  line-height: 1.35;
+  font-size: 0.98rem;
+}
+@media (max-width: 900px) {
+  .scenario-grid {
+    grid-template-columns: 1fr;
+  }
+}

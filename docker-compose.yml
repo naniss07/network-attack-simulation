@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  network-simulation:
+    build: .
+    ports:
+      - "5028:5028"
+    environment:
+      - PORT=5028
+    restart: unless-stopped 

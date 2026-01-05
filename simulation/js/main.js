@@ -304,9 +304,9 @@ function schedulePacketAnimation({srcIP, srcMAC, dstIP, dstMAC, protocol, conten
       path = [src.id, forcedSwitchId, dst.id];
     } else {
       // Ortak switch yoksa, mevcut mantıkla devam et
-    path = findTwoHopPathViaType(src.id, dst.id, 'switch')
-        || findPathAvoidingTypes(src.id, dst.id, new Set(['router']))
-        || findPath(src.id, dst.id);
+      path = findTwoHopPathViaType(src.id, dst.id, 'switch')
+          || findPathAvoidingTypes(src.id, dst.id, new Set(['router']))
+          || findPath(src.id, dst.id);
     }
   } else {
     // Diğer protokoller için normal yol bulma
@@ -494,17 +494,20 @@ const scenarios = {
   dos: {
     label: 'DoS (Tek Kaynak)',
     flow: (() => {
-      // Attacker -> Web Server (HTTP flood)
+      // Tek client -> hedef webserver'a çok sayıda HTTP paketi
       const bursts = [];
       for (let i = 0; i < 15; i++) {
         bursts.push({
+          // DoS topolojisinde saldırgan tek kaynaklı flood üretir
+          // Topoloji: setTopologyDoS() içinde attacker:
+          // ip: '10.0.0.66', mac: 'AA:BB:CC:0B'
           srcIP: '10.0.0.66', srcMAC: 'AA:BB:CC:0B',
           dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:09',
           protocol: 'HTTP', content: `FLOOD ${i+1}`,
           attack: true
         });
       }
-      // 2) Sonuç: Overload (yerel olay)
+      // Saldırı sonucunda sunucunun aşırı yüklenmesi – yerel olay
       bursts.push({ type: 'local', deviceIP: '192.168.1.100', protocol: 'OVERLOAD', content: 'Server overload' });
       return bursts;
     })()
@@ -514,33 +517,35 @@ const scenarios = {
     flow: (() => {
       // Botnet senaryosu (eşzamanlı):
       // 1) Attacker -> tüm zombiler (komut) [hafif aralıklı]
-      // 2) Tüm zombiler -> Server (flood) [tam eşzamanlı, tek dalga]
+      // 2) Tüm zombiler -> Server (flood) [tam eşzamanlı, çoklu dalga]
       const flow = [];
       const zombieIPs = Array.from({ length: 10 }).map((_, i) => `10.0.1.${10 + i}`);
       const zombieMACs = Array.from({ length: 10 }).map((_, i) => `AA:BB:DD:${(i+1).toString().padStart(2,'0')}`);
       const attackerMac = 'AA:BB:DD:00';
       
-      // "Tek tur" (CMD + FLOOD) akışını tekrar sayısı kadar uygula
-      const repeatRounds = 3;
-      for (let r = 0; r < repeatRounds; r++) {
-        // 1) CMD dalgası (hafif aralıklı başlatma)
+      // 1) Komut: attacker -> zombiler (hafif aralıklı başlatma, görsel ayrışma için)
+      // DİKKAT: Her CMD paketi için protocol='CMD' belirtiliyor
       flow.push(zombieIPs.map((ip, idx) => ({
         srcIP: '10.0.1.5', srcMAC: attackerMac,
         dstIP: ip, dstMAC: zombieMACs[idx],
-          protocol: 'CMD',
-          content: `ATTACK_CMD to Zombie ${idx+1} (round ${r+1})`,
+        protocol: 'CMD', // Bu çok önemli - yol bulma algoritması bunu kullanıyor
+        content: `ATTACK_CMD to Zombie ${idx+1}`,
         attack: true,
         startDelayMs: idx * 120
       })));
-        // 2) FLOOD dalgası (tek dalga)
-      flow.push(zombieIPs.map((ip, idx) => ({
-        srcIP: ip, srcMAC: zombieMACs[idx],
-        dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:09',
-          protocol: 'HTTP', content: `FLOOD Z${idx+1} (round ${r+1})`,
-        attack: true
-      })));
+      
+      // 2) Flood: zombiler -> server (tam eşzamanlı, çoklu dalga)
+      const FLOOD_WAVE_COUNT = 5; // 1 mevcut + 4 ek dalga
+      for (let wave = 1; wave <= FLOOD_WAVE_COUNT; wave++) {
+        flow.push(zombieIPs.map((ip, idx) => ({
+          srcIP: ip, srcMAC: zombieMACs[idx],
+          dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:09',
+          protocol: 'HTTP',
+          content: `FLOOD W${wave} Z${idx+1}`,
+          attack: true
+        })));
       }
-      // Sonunda overload yerel olayı
+      
       flow.push({ type: 'local', deviceIP: '192.168.1.100', protocol: 'OVERLOAD', content: 'Server overload' });
       return flow;
     })()
@@ -600,7 +605,7 @@ const scenarios = {
       // 2a) DNS Server yanıtı önce Router'a gelir
       {
         srcIP: '192.168.2.53', srcMAC: 'AA:BB:CC:0A',
-        dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:08', // Router eth3 MAC
+        dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:0B', // Attacker MAC (MITM - Router, ARP zehiriyle paketi saldırgana yollar)
         protocol: 'DNS', content: 'example.com -> 192.168.1.100 (Legit)'
       },
 
@@ -615,7 +620,7 @@ const scenarios = {
   arp_spoofing: {
     label: 'ARP Spoofing (MITM)',
     flow: [
-      // 0) ARP Poisoning – Client & Router tabloları zehirlenir
+      // 0) ARP Poisoning – Client 1 & Router tabloları zehirlenir (10.0.0.x network)
       {
         srcIP: '10.0.0.1', srcMAC: 'AA:BB:CC:0B',
         dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:01',
@@ -626,36 +631,36 @@ const scenarios = {
         dstIP: '10.0.0.1', dstMAC: 'AA:BB:CC:05',
         protocol: 'ARP', content: 'ARP Reply: 10.0.0.10 is at AA:BB:CC:0B'
       },
-
-      // 1) Client -> Web Server HTTP isteği (trafik önce attacker'a gider)
+      
+      // 1) Client 1 -> Web Server HTTP isteği (trafik önce attacker'a gider)
       {
         srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:01',
         dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:0B', // Attacker MAC (Gateway olarak)
         protocol: 'HTTP', content: 'GET /login'
       },
-
+      
       // 1b) Attacker, isteği Router'a iletir (Layer-2 forward)
       {
         srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:0B',
         dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:05', // Router eth0 MAC
         protocol: 'HTTP', content: 'GET /login (Forward)'
       },
-
+      
       // 2) Web Server yanıtı önce Router'a gelir
       {
         srcIP: '192.168.1.100', srcMAC: 'AA:BB:CC:09',
         dstIP: '192.168.1.1', dstMAC: 'AA:BB:CC:07', // Router eth2 (hedef router)
         protocol: 'HTTP', content: '200 OK (To Router)'
       },
-
+      
       // 2b) Router, ARP zehirlenmesi nedeniyle paketi Attacker'a iletir
       {
         srcIP: '192.168.1.1', srcMAC: 'AA:BB:CC:07',
-        dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:0B', // Attacker MAC (Client yerine)
+        dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:0B', // Attacker MAC (Client 1 yerine)
         protocol: 'HTTP', content: '200 OK (Forward via Attacker)'
       },
-
-      // 3) Attacker yanıtı manipüle edip Client'a gönderir
+      
+      // 3) Attacker yanıtı manipüle edip Client 1'e gönderir
       {
         srcIP: '192.168.1.100', srcMAC: 'AA:BB:CC:0B',
         dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:01',
@@ -666,15 +671,17 @@ const scenarios = {
   ip_spoofing: {
     label: 'IP Spoofing',
     flow: [
-      // Attacker, Client'ın IP'sini taklit ederek Web Server'a istek atıyor
+      // Attacker, Client 1'in IP'sini taklit ederek Web Server'a istek atıyor (eth0 ağı)
       {
-        srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:0B',  // MAC attacker, IP client
+        // Kaynak IP: 10.0.0.10 (Client 1), MAC: attacker (AA:BB:CC:0B)
+        srcIP: '10.0.0.10', srcMAC: 'AA:BB:CC:0B',
         dstIP: '192.168.1.100', dstMAC: 'AA:BB:CC:09',
         protocol: 'HTTP', content: 'GET /admin'
       },
-      // Web Server'dan sahte Client'a (aslında attacker) yanıt
+      // Web Server'dan sahte Client 1'e (aslında attacker) yanıt
       {
         srcIP: '192.168.1.100', srcMAC: 'AA:BB:CC:09',
+        // Hedef IP: 10.0.0.10 (Client 1), MAC: attacker (AA:BB:CC:0B)
         dstIP: '10.0.0.10', dstMAC: 'AA:BB:CC:0B',
         protocol: 'HTTP', content: '403 Forbidden'
       }
@@ -693,7 +700,7 @@ const scenarioDescriptions = {
   dos: {
     definition: 'Saldırgan, tek bir kaynaktan hedef web sunucusuna çok kısa süre içerisinde yoğun HTTP istekleri göndererek sunucu kaynaklarının (CPU, bellek) tükenmesini ve hizmet kesintisi oluşmasını amaçlar.',
     purpose: 'Hedef sistemin erişilebilirliğini azaltmak veya tamamen hizmet dışı bırakmak.',
-    impact: '10.0.0.10 → 192.168.1.100 yönünde yoğun HTTP trafiği oluşur; sunucu tarafında aşırı yük (overload) gözlemlenir.'
+    impact: '10.0.0.66 (Attacker) → 192.168.1.100 yönünde yoğun HTTP trafiği oluşur; sunucu tarafında aşırı yük (overload) gözlemlenir.'
   },
 
   ddos: {
@@ -715,7 +722,7 @@ const scenarioDescriptions = {
   },
 
   arp_spoofing: {
-    definition: 'Saldırgan, istemci ve router’ın ARP tablolarını sahte ARP yanıtları ile zehirleyerek yerel ağ trafiğini kendi cihazı üzerinden yönlendirir ve trafiği izleme veya manipüle etme yeteneği kazanır.',
+    definition: 'Saldırgan, istemci ve router ın ARP tablolarını sahte ARP yanıtları ile zehirleyerek yerel ağ trafiğini kendi cihazı üzerinden yönlendirir ve trafiği izleme veya manipüle etme yeteneği kazanır.',
     purpose: 'Ağ trafiğini araya girerek izlemek veya değiştirmek.',
     impact: '10.0.0.1 ve 10.0.0.10 adresleri için MAC eşleşmeleri saldırganın MAC adresi ile güncellenir.'
   },
@@ -764,6 +771,12 @@ if (attackSelectEl) {
         window.setTopologyDoS();
       } else if (key === 'ddos' && window.setTopologyDDoS) {
         window.setTopologyDDoS();
+      } else if ((key === 'arp_spoofing' || key === 'ip_spoofing') && window.setTopologyDefault) {
+        // ARP Spoofing ve IP Spoofing için attacker üst LAN'da (Client 1 ile, eth0 ağı)
+        window.setTopologyDefault();
+      } else if ((key === 'dns_spoofing_race' || key === 'dns_spoofing_mitm') && window.setTopologyDefault) {
+        // DNS Spoofing senaryoları için attacker üst LAN'da (Client 1 ile)
+        window.setTopologyDefault();
       } else if (window.setTopologyDefault) {
         window.setTopologyDefault();
       }

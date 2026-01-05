@@ -1,0 +1,21 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build / dist çıktıları
+dist/
+build/
+.next/
+out/
+
+# Ortam dosyaları
+.env
+.env.local
+.env.*.local
+
+# Sistem dosyaları
+.DS_Store
+Thumbs.db
+
+

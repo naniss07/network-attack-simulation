@@ -15,6 +15,17 @@
       <button id="startBtn">Başlat</button>
       <button id="stopBtn">Durdur</button>
       <button id="resetBtn">Sıfırla</button>
+      <!-- Saldırı senaryosu seçimi -->
+      <label for="attackSelect">Senaryo:</label>
+      <select id="attackSelect">
+        <option value="normal">Normal Trafik</option>
+        <option value="dos">DoS (Tek Kaynak)</option>
+        <option value="ddos">DDoS (Botnet)</option>
+        <option value="dns_spoofing_race">DNS Spoofing (Race)</option>
+        <option value="dns_spoofing_mitm">DNS Spoofing (MITM)</option>
+        <option value="arp_spoofing">ARP Spoofing (MITM)</option>
+        <option value="ip_spoofing">IP Spoofing</option>
+      </select>
     </div>
     <div class="sim-container">
       <canvas id="networkCanvas" width="1100" height="600"></canvas>
@@ -23,6 +34,23 @@
         <ul id="packetList"></ul>
       </div>
     </div>
+    <section id="scenarioInfo" aria-live="polite">
+      <h2>Senaryo Bilgi Paneli</h2>
+      <div class="scenario-grid">
+        <div class="scenario-card">
+          <h3>Saldırı Tanımı</h3>
+          <p id="scenario-info-definition">Seçilen senaryonun teknik özeti burada gözükecek.</p>
+        </div>
+        <div class="scenario-card">
+          <h3>Neden Yapılır? (Amaç)</h3>
+          <p id="scenario-info-purpose">Saldırganın hedefi ve motivasyonu burada gözükecek.</p>
+        </div>
+        <div class="scenario-card">
+          <h3>Ağ Üzerindeki Etkisi</h3>
+          <p id="scenario-info-impact">Simülasyonda değişen/etkilenen adreslerin özeti burada gözükecek.</p>
+        </div>
+      </div>
+    </section>
   </main>
   <script src="js/visualization.js"></script>
   <script src="js/main.js"></script>

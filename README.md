@@ -1,51 +1,65 @@
-# Network Simulation Project
+## Network Attack Simulation
 
-Bu proje ağ simülasyonu için geliştirilmiş bir web uygulamasıdır.
+Etkileşimli ağ saldırı simülasyonu. DoS, DDoS, ARP Spoofing, IP Spoofing ve DNS Spoofing senaryolarını görsel olarak gösteren, tamamen istemci tarafında çalışan (serverless) bir web uygulaması.
 
-## Docker ile Çalıştırma
+---
 
-### 1. Docker Image Oluşturma
-```bash
-docker build -t network-simulation .
-```
+## Hızlı Başlangıç (Serverless / Sadece Tarayıcı)
 
-### 2. Container Çalıştırma
-```bash
-docker run -p 5028:5028 network-simulation
-```
+Bu proje **sadece statik dosyalarla** da çalışır; Node.js veya Docker zorunlu değildir.
 
-### 3. Docker Compose ile Çalıştırma
-```bash
-docker-compose up -d
-```
+1. `simulation/index.html` dosyasını tarayıcıda aç.
+2. Tüm ağ topolojisi, animasyonlar ve saldırı senaryoları doğrudan çalışır.
 
-## Yerel Geliştirme
+Canlıya almak için, `simulation` klasörünü herhangi bir statik hosting’e (Vercel, Netlify, GitHub Pages vb.) root dizini olarak yüklemen yeterlidir.
 
-### 1. Bağımlılıkları Yükleme
+---
+
+## Node.js ile Çalıştırma (Opsiyonel)
+
+Yerelde küçük bir Express sunucusu üzerinden çalıştırmak istersen:
+
+### 1. Bağımlılıkları yükle
 ```bash
 npm install
 ```
 
-### 2. Uygulamayı Başlatma
+### 2. Uygulamayı başlat
 ```bash
 npm start
 ```
 
-### 3. Geliştirme Modu
+Varsayılan olarak uygulama `http://localhost:5028` adresinde çalışır ve `simulation/` klasörünü servis eder.
+
+Geliştirme sırasında otomatik yeniden başlatma için:
 ```bash
 npm run dev
 ```
 
-## Erişim
+---
 
-Uygulama http://localhost:5028 adresinde çalışacaktır.
+## Docker ile Çalıştırma (Tamamen Opsiyonel)
 
-## Port Yapılandırması
+### 1. Docker imajı oluştur
+```bash
+docker build -t network-simulation .
+```
 
-- **Port**: 5028
-- **Protokol**: HTTP
-- **Erişim**: http://localhost:5028 veya http://sunucu-ip:5028
+### 2. Container çalıştır
+```bash
+docker run -p 5028:5028 network-simulation
+```
 
-"# IP-SPOOF-NG" 
-"# network-attack-simulation" 
-"# network-attack-simulation" 
+### 3. Docker Compose ile
+```bash
+docker-compose up -d
+```
+
+Container içinde de uygulama `http://localhost:5028` üzerinden erişilebilir olur.
+
+---
+
+## Port Bilgisi
+
+- **HTTP portu**: `5028` (Node.js veya Docker kullanıyorsan)
+- Saf statik hosting kullanıyorsan, port hosting sağlayıcısına göre değişir.
