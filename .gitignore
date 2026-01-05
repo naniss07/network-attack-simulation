@@ -1,4 +1,9 @@
 node_modules/
+
+# Node paket dosyaları (repo'da istemiyorsun)
+package-lock.json
+package.json
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
